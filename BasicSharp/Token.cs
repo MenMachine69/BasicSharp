@@ -10,21 +10,30 @@ namespace BasicSharp
 
         //Keywords
         Print,
+        PrintL,
         If,
         EndIf,
         Then,
         Else,
         For,
         To,
+        Step,
         Next,
         Goto,
         Input,
+        Inkey,
         Let,
         Gosub,
         Return,
         Rem,
         End,
         Assert,
+        Clear,
+        Sleep,
+        SetPos,
+
+        FRead,
+        FWrite,
 
         NewLine,
         Colon,
@@ -48,6 +57,8 @@ namespace BasicSharp
 
         LParen,
         RParen,
+
+        Test,
 
         EOF = -1   //End Of File
     }

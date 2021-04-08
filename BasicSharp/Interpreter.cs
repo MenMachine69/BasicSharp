@@ -8,6 +8,9 @@ namespace BasicSharp
         public bool HasPrint { get; set; } = true;
         public bool HasInput { get; set; } = true;
 
+        public IConsole Console { get; set; } = new DefaultConsole();
+
+
         private Lexer lex;
         private Token prevToken; // token before last one
         private Token lastToken; // last seen token
@@ -15,6 +18,7 @@ namespace BasicSharp
         private Dictionary<string, Value> vars; // all variables are stored here
         private Dictionary<string, Marker> labels; // already seen labels 
         private Dictionary<string, Marker> loops; // for loops
+        private Dictionary<string, int> steps; // all variables are stored here
 
         public delegate Value BasicFunction(Interpreter interpreter, List<Value> args);
         private Dictionary<string, BasicFunction> funcs; // all maped functions
@@ -29,6 +33,7 @@ namespace BasicSharp
         {
             this.lex = new Lexer(input);
             this.vars = new Dictionary<string, Value>();
+            this.steps = new Dictionary<string, int>();
             this.labels = new Dictionary<string, Marker>();
             this.loops = new Dictionary<string, Marker>();
             this.funcs = new Dictionary<string, BasicFunction>();
@@ -114,8 +119,13 @@ namespace BasicSharp
             GetNextToken();
             switch (keyword)
             {
+                case Token.Sleep: Sleep(); break;
+                case Token.Clear: Clear(); break;
+                case Token.SetPos: SetPos(); break;
                 case Token.Print: Print(); break;
+                case Token.PrintL: PrintL(); break;
                 case Token.Input: Input(); break;
+                case Token.Inkey: Inkey(); break;
                 case Token.Goto: Goto(); break;
                 case Token.If: If(); break;
                 case Token.Else: Else(); break;
@@ -125,6 +135,8 @@ namespace BasicSharp
                 case Token.Let: Let(); break;
                 case Token.End: End(); break;
                 case Token.Assert: Assert(); break;
+                case Token.FRead: FRead(); break;
+                case Token.FWrite: FWrite(); break;
                 case Token.Identifier:
                     if (lastToken == Token.Equal) Let();
                     else if (lastToken == Token.Colon) Label();
@@ -145,13 +157,132 @@ namespace BasicSharp
             }
         }
 
+
+        #region command methods
         void Print()
         {
             if (!HasPrint)
                 Error("Print command not allowed");
 
-            Console.WriteLine(Expr().ToString());
+            while (true)
+            {
+                Console.Write(Expr().ToString());
+
+                if (lastToken == Token.NewLine || lastToken == Token.Semicolon || lastToken == Token.EOF)
+                    break;
+
+                GetNextToken();
+            }
         }
+
+        void PrintL()
+        {
+            if (!HasPrint)
+                Error("Print command not allowed");
+
+            while (true)
+            {
+                Console.WriteLine(Expr().ToString());
+
+                if (lastToken == Token.NewLine || lastToken == Token.Semicolon || lastToken == Token.EOF)
+                    break;
+
+                GetNextToken();
+            }
+        }
+
+        void FRead()
+        {
+            Match(Token.Identifier);
+
+            if (!vars.ContainsKey(lex.Identifier)) vars.Add(lex.Identifier, new Value());
+
+            GetNextToken();
+
+            string file = "";
+
+            if (lastToken == Token.Comma)
+            {
+                GetNextToken();
+                file = Expr().String;
+            }
+            else
+                GetNextToken();
+
+            if (string.IsNullOrEmpty(file))
+                Error("Missing filename (second paramneter).");
+
+            if (System.IO.File.Exists(file) == false)
+                Error("File not found.");
+
+            try
+            {
+                string content = System.IO.File.ReadAllText(file, System.Text.Encoding.Default);
+                vars[lex.Identifier] = new Value(content);
+            }
+            catch
+            {
+                Error("Error while reading from file.");
+            }
+        }
+
+        void FWrite()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length != 2)
+                Error("Wrong parameter count. Need 2 parameters.");
+
+            if (!(parameters[1] is string))
+                Error("Wrong parameter type (2). Need string parameter.");
+
+            try
+            {
+                System.IO.File.WriteAllText(parameters[0].ToString(), parameters[1].ToString(), System.Text.Encoding.Default);
+            }
+            catch
+            {
+                Error("Error while writing to file.");
+            }
+        }
+
+        void Sleep()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length != 1)
+                Error("Wrong parameter count. Need 1 parameter.");
+
+            if (!(parameters[0] is double))
+                Error("Wrong parameter type (1). Need numeric parameter.");
+
+            Console.Sleep(Convert.ToInt32(parameters[0]));
+        }
+
+        void SetPos()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length != 2)
+                Error("Wrong parameter count. Need 2 parameter.");
+
+            if (!(parameters[0] is double))
+                Error("Wrong parameter type (1). Need numeric parameter.");
+
+            if (!(parameters[1] is double))
+                Error("Wrong parameter type (2). Need numeric parameter.");
+
+            Console.SetPos(Convert.ToInt32(parameters[0]), Convert.ToInt32(parameters[1]));
+        }
+
+        void Clear()
+        {
+            Console.Clear();
+
+            GetNextToken();
+        }
+
+
 
         void Input()
         {
@@ -176,6 +307,32 @@ namespace BasicSharp
                 if (lastToken != Token.Comma) break;
                 GetNextToken();
             }
+        }
+
+        void Inkey()
+        {
+            if (!HasInput)
+                Error("Inkey command not allowed");
+
+            Match(Token.Identifier);
+
+            if (!vars.ContainsKey(lex.Identifier)) vars.Add(lex.Identifier, new Value());
+
+            int wait = 0;
+
+            GetNextToken();
+
+            if (lastToken == Token.Comma)
+            {
+                GetNextToken();
+                wait = Convert.ToInt32(Expr().Real);
+            }
+            else
+                GetNextToken();
+
+            int input = Console.Read(wait);
+
+            vars[lex.Identifier] = new Value(input);
         }
 
         void Goto()
@@ -302,6 +459,7 @@ namespace BasicSharp
         {
             Match(Token.Identifier);
             string var = lex.Identifier;
+            Double start = 1;
 
             GetNextToken();
             Match(Token.Equal);
@@ -309,10 +467,12 @@ namespace BasicSharp
             GetNextToken();
             Value v = Expr();
 
+            start = v.Real;
+
             // save for loop marker
             if (loops.ContainsKey(var))
             {
-                loops[var] = lineMarker; 
+                loops[var] = lineMarker;
             }
             else
             {
@@ -325,17 +485,49 @@ namespace BasicSharp
             GetNextToken();
             v = Expr();
 
-            if (vars[var].BinOp(v, Token.More).Real == 1)
+            // save steps for loop
+            if (!steps.ContainsKey(var))
+                steps.Add(var, (start > v.Real ? -1 : 1));
+            else
+                steps[var] = (start > v.Real ? -1 : 1);
+
+            if (lastToken == Token.Step)
             {
-                while (true)
+                GetNextToken();
+                steps[var] = Convert.ToInt32(Expr().Real);
+            }
+
+            if (start > v.Real)
+            {
+                if (vars[var].BinOp(v, Token.Less).Real == 1)
                 {
-                    while (!(GetNextToken() == Token.Identifier && prevToken == Token.Next)) ;
-                    if (lex.Identifier == var)
+                    while (true)
                     {
-                        loops.Remove(var);
-                        GetNextToken();
-                        Match(Token.NewLine);
-                        break;
+                        while (!(GetNextToken() == Token.Identifier && prevToken == Token.Next)) ;
+                        if (lex.Identifier == var)
+                        {
+                            loops.Remove(var);
+                            GetNextToken();
+                            Match(Token.NewLine);
+                            break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (vars[var].BinOp(v, Token.More).Real == 1)
+                {
+                    while (true)
+                    {
+                        while (!(GetNextToken() == Token.Identifier && prevToken == Token.Next)) ;
+                        if (lex.Identifier == var)
+                        {
+                            loops.Remove(var);
+                            GetNextToken();
+                            Match(Token.NewLine);
+                            break;
+                        }
                     }
                 }
             }
@@ -346,7 +538,7 @@ namespace BasicSharp
             // jump to begining of the "for" loop
             Match(Token.Identifier);
             string var = lex.Identifier;
-            vars[var] = vars[var].BinOp(new Value(1), Token.Plus);
+            vars[var] = vars[var].BinOp(new Value(steps[var]), Token.Plus);
             lex.GoTo(new Marker(loops[var].Pointer - 1, loops[var].Line, loops[var].Column - 1));
             lastToken = Token.NewLine;
         }
@@ -359,6 +551,26 @@ namespace BasicSharp
             {
                 Error("Assertion fault"); // if out assert evaluate to false, throw error with souce code line
             }
+        }
+        #endregion
+
+        #region helping methods
+        object[] getParameters()
+        {
+            List<object> param = new List<object>();
+
+            while (true)
+            {
+                Value val = Expr();
+                param.Add(val.Type == ValueType.Real ? (object)val.Real : (object)val.String);
+
+                if (lastToken == Token.NewLine || lastToken == Token.Semicolon || lastToken == Token.EOF)
+                    break;
+
+                GetNextToken();
+            }
+
+            return (param.Count > 0 ? param.ToArray() : null);
         }
 
         Value Expr(int min = 0)
@@ -457,5 +669,6 @@ namespace BasicSharp
 
             return prim;
         }
+        #endregion
     }
 }

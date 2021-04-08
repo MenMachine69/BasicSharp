@@ -66,6 +66,12 @@ namespace BasicSharp
             while (lastChar == ' ' || lastChar == '\t' || lastChar == '\r')
                 GetChar();
 
+            if (lastChar == '#')
+            {
+                while (lastChar != '\n')
+                    GetChar();
+            }
+
             TokenMarker = sourceMarker;
 
             if (char.IsLetter(lastChar))
@@ -76,16 +82,24 @@ namespace BasicSharp
 
                 switch (Identifier.ToUpper())
                 {
+                    case "FREAD": return Token.FRead;
+                    case "FWRITE": return Token.FWrite;
+                    case "POS": return Token.SetPos;
+                    case "CLS": return Token.Clear;
+                    case "SLEEP": return Token.Sleep;
                     case "PRINT": return Token.Print;
+                    case "PRINTL": return Token.PrintL;
                     case "IF": return Token.If;
                     case "ENDIF": return Token.EndIf;
                     case "THEN": return Token.Then;
                     case "ELSE": return Token.Else;
                     case "FOR": return Token.For;
                     case "TO": return Token.To;
+                    case "STEP": return Token.Step;
                     case "NEXT": return Token.Next;
                     case "GOTO": return Token.Goto;
                     case "INPUT": return Token.Input;
+                    case "INKEY": return Token.Inkey;
                     case "LET": return Token.Let;
                     case "GOSUB": return Token.Gosub;
                     case "RETURN": return Token.Return;
@@ -130,11 +144,6 @@ namespace BasicSharp
                 case '^': tok = Token.Caret; break;
                 case '(': tok = Token.LParen; break;
                 case ')': tok = Token.RParen; break;
-                case '\'':
-                    // skip comment until new line
-                    while (lastChar != '\n') GetChar();
-                    GetChar();
-                    return GetToken();
                 case '<':
                     GetChar();
                     if (lastChar == '>') tok = Token.NotEqual;
@@ -146,27 +155,12 @@ namespace BasicSharp
                     if (lastChar == '=') tok = Token.MoreEqual;
                     else return Token.More;
                     break;
+                case '\'':
+                    Value = new Value(readStr('\''));
+                    tok = Token.Value;
+                    break;
                 case '"':
-                    string str = "";
-                    while (GetChar() != '"')
-                    {
-                        if (lastChar == '\\')
-                        {
-                            // parse \n, \t, \\, \"
-                            switch (char.ToLower(GetChar()))
-                            {
-                                case 'n': str += '\n'; break;
-                                case 't': str += '\t'; break;
-                                case '\\': str += '\\'; break;
-                                case '"': str += '"'; break;
-                            }
-                        }
-                        else
-                        {
-                            str += lastChar;
-                        }
-                    }
-                    Value = new Value(str);
+                    Value = new Value(readStr('"'));
                     tok = Token.Value;
                     break;
                 case (char)0:
@@ -175,6 +169,32 @@ namespace BasicSharp
 
             GetChar();
             return tok;
+        }
+
+        string readStr(char limiter)
+        {
+            string str = "";
+            while (GetChar() != limiter)
+            {
+                if (lastChar == '\\')
+                {
+                    // parse \n, \t, \\, \", \'
+                    switch (char.ToLower(GetChar()))
+                    {
+                        case 'n': str += '\n'; break;
+                        case 't': str += '\t'; break;
+                        case '\\': str += '\\'; break;
+                        case '"': str += '"'; break;
+                        case '\'': str += '\''; break;
+                    }
+                }
+                else
+                {
+                    str += lastChar;
+                }
+            }
+
+            return str;
         }
     }
 }
