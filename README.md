@@ -43,45 +43,52 @@ List of all supported Commands and functions.
 
 Keywords
 --------
-#LET 
+**LET** 
     
-#PRINT 
+**PRINT** 
+Output a expression, a string and/or a value without linebreak.
 
-#PRINTL
+**PRINTL**
+Output a expression, a string and/or a value with linebreak.
 
-#CLS
+**CLS**
+Clear console output and set position to top-left (row 1, col 1).
 
-POS
+**POS**
+Set output position to a specific row and column. In combination with PRINT this allows output on a specific position in the console window.
 
-SLEEP
+**SLEEP**
+Execution interrupts for the given milliseconds.
 
-FREAD
+**FREAD**
+Read content of a file and save the contet into variable.
 
-FWRITE
+**FWRITE**
+Write content to a file.
 
-IF THEN ELSE ENDIF
+**IF THEN ELSE ENDIF***
 
-FOR TO STEP NEXT
+**FOR TO STEP NEXT**
 
-GOTO
+**GOTO**
 
-INPUT
+**INPUT**
 
-INKEY
+**INKEY**
 
-GOSUB RETURN
+**GOSUB RETURN**
 
-REM
+**REM**
 
-ASSERT
+**ASSERT**
 
-END
+**END**
 
-OR 
+**OR** 
 
-AND 
+**AND** 
 
-NOT
+**NOT**
 
 Build in functions
 ------------------
