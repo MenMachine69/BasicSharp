@@ -12,6 +12,7 @@ I believe that such a system could give the audience the fun of programming that
 
 Example
 -------
+,,,,
 print "Hello World"
 
 let a = 10
@@ -35,7 +36,7 @@ print "False"
 
 mylabel:
 Print "True"
-
+,,,,
 
 BASIC Reference
 ===============
