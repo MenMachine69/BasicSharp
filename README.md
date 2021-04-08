@@ -43,13 +43,13 @@ List of all supported Commands and functions.
 
 Keywords
 --------
-#LET# 
+#LET 
     
-#PRINT# 
+#PRINT 
 
-#PRINTL#
+#PRINTL
 
-#CLS#
+#CLS
 
 POS
 
