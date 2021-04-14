@@ -1,3 +1,4 @@
+using BasicConsole;
 using System;
 using System.Collections.Generic;
 
@@ -8,7 +9,7 @@ namespace BasicSharp
         public bool HasPrint { get; set; } = true;
         public bool HasInput { get; set; } = true;
 
-        public IConsole Console { get; set; } = new DefaultConsole();
+        public IConsole Console { get; set; } = new TextModeConsole();
 
 
         private Lexer lex;

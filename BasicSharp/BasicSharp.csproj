@@ -36,13 +36,18 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BuiltIns.cs" />
-    <Compile Include="IConsole.cs" />
     <Compile Include="Marker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Interpreter.cs" />
     <Compile Include="Lexer.cs" />
     <Compile Include="Token.cs" />
     <Compile Include="Value.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BasicConsole\BasicConsole.csproj">
+      <Project>{050aa34f-7a33-431a-acbd-5dc6a473c8ca}</Project>
+      <Name>BasicConsole</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

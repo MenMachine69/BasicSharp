@@ -1,25 +1,11 @@
 ﻿using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Linq;
-    using System.Text;
-    using System.Threading;
-    using System.Threading.Tasks;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
 
-namespace BasicSharp
+namespace BasicConsole
 {
-    public interface IConsole
-    {
-        void Write(string str);
-        void WriteLine(string str);
-        string ReadLine();
-        int Read(int millisec);
-        void Clear();
-        void SetPos(int row, int col);
-        void Sleep(int millisec);
-    }
-
-    public class DefaultConsole : IConsole
+    public class TextModeConsole : IConsole
     {
         public void Write(string str) { Console.Write(str); }
 
@@ -58,4 +44,3 @@ namespace BasicSharp
         public void Sleep(int millisec) { Thread.Sleep(millisec); }
     }
 }
-
