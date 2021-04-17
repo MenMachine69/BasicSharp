@@ -16,6 +16,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BasicConsole", "BasicConsol
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphicsConsole.Test", "GraphicsConsole.Test\GraphicsConsole.Test.csproj", "{03F15EAD-5A5A-4492-A517-B0374DCC23AD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BASIC.FontEditor", "BASIC.FontEditor\BASIC.FontEditor.csproj", "{03C679A1-7997-4733-B045-33DA41BDF17B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Ressourcen", "Ressourcen", "{1B3E40D6-6076-444E-A5D2-E3C4455829AC}"
+	ProjectSection(SolutionItems) = preProject
+		Ressources\atari.fnt = Ressources\atari.fnt
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +48,10 @@ Global
 		{03F15EAD-5A5A-4492-A517-B0374DCC23AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03F15EAD-5A5A-4492-A517-B0374DCC23AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{03F15EAD-5A5A-4492-A517-B0374DCC23AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03C679A1-7997-4733-B045-33DA41BDF17B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03C679A1-7997-4733-B045-33DA41BDF17B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03C679A1-7997-4733-B045-33DA41BDF17B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03C679A1-7997-4733-B045-33DA41BDF17B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
