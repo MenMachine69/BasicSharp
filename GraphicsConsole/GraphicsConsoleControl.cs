@@ -1,10 +1,14 @@
-﻿using System;
+﻿using BasicConsole;
+using BasicSharp;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Forms;
@@ -31,6 +35,21 @@ namespace GraphicsConsole
                 return _designMode;
             }
         }
+
+        /// <summary>
+        /// Loads an image from file without blocking the file
+        /// </summary>
+        /// <param name="file">file to load from</param>
+        /// <returns>loaded image</returns>
+        public static Image ImageFromFile(string file)
+        {
+            Image img = null;
+
+            using (FileStream fstream = new FileStream(file, FileMode.Open, FileAccess.Read))
+                img = Image.FromStream(fstream);
+
+            return img;
+        }
     }
 
     /// <summary>
@@ -39,11 +58,17 @@ namespace GraphicsConsole
     [ToolboxItem(true)]
     public class GraphicsConsoleControl : Control
     {
-        graphicsComposer _composer;
+        composer _composer;
         SolidBrush _borderBrush;
         Color _borderColor;
         Task _composerTask;
         System.Timers.Timer _refreshScreenTimer;
+        Char _lastchar = Char.MinValue;
+        bool _inputMode = false;
+        bool _inkeyMode = false;
+        bool _removeLastChar = false;
+        bool _cancelInput = false;
+        Keys _lastInKey = Keys.None;
 
 
         public GraphicsConsoleControl()
@@ -57,8 +82,26 @@ namespace GraphicsConsole
 
                 SetBorderColor(Color.LightSkyBlue);
 
-                _composer = new graphicsComposer();
+                _composer = new composer();
+                _composer.Host = this;
+                _composer.Started += OnStarted;
+                _composer.Stopped += OnStopped;
             }
+        }
+
+        public event EventHandler Started;
+        public event EventHandler Stopped;
+
+        void OnStarted(object sender, EventArgs e)
+        {
+            Running = true;
+            Started?.Invoke(sender, e);
+        }
+
+        void OnStopped(object sender, EventArgs e)
+        {
+            Running = false;
+            Stopped?.Invoke(sender, e);
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -67,6 +110,7 @@ namespace GraphicsConsole
 
             if (Tools.IsDesignMode == false)
             {
+
                 _composerTask = Task.Factory.StartNew(_composer.Run, TaskCreationOptions.LongRunning);
                 ////_composerTask.Start();
 
@@ -75,31 +119,114 @@ namespace GraphicsConsole
             }
         }
 
+        public bool Running { get; private set; }
+
+        public void Run(string code)
+        {
+            _lastchar = Char.MinValue;
+            _inputMode = false;
+            _inkeyMode = false;
+            _removeLastChar = false;
+            _lastInKey = Keys.None;
+            _cancelInput = false;
+
+            Running = true;
+            _composer.Interpreter = new Interpreter(code);
+            _composer.Start();
+        }
+
+        public void Stop()
+        {
+            _cancelInput = true;
+            _composer.Stop();
+        }
+
+        public void Sleep(int millisec)
+        {
+            _composer.Sleep(millisec);
+        }
+
         void _paintScreen(object sender, ElapsedEventArgs e)
         {
             if (InvokeRequired)
                 Invoke(new Action(() => { Refresh(); }));
         }
 
+        public void LoadSprite(string filename, string name)
+        {
+            _composer.LoadSprite(filename, name);
+        }
+
+        public void LoadSprite(Image img, string name)
+        {
+            _composer.LoadSprite(img, name);
+        }
+
+        public void DrawSprite(string name, int x, int y)
+        {
+            _composer.DrawSprite(name, x, y);
+        }
+
+        public void DrawSprite(string name, int x, int y, int width, int height)
+        {
+            _composer.DrawSprite(name, x, y, width, height);
+        }
+
+        public void RemoveSprite(string name, int x, int y)
+        {
+            _composer.RemoveSprite(name, x, y);
+        }
+
+
         public void DrawLine(int xStart, int yStart, int xEnd, int yEnd, Color color)
         {
-            _composer.DrawLine(xStart, yStart, xEnd, yEnd, color);
+            _composer.DrawGraphicElement(eGrahicsElement.Line, color, xStart, yStart, xEnd, yEnd);
         }
 
         public void DrawRectangle(int xStart, int yStart, int width, int height, Color color)
         {
-            _composer.DrawRectangle(xStart, yStart, width, height, color);
+            _composer.DrawGraphicElement(eGrahicsElement.Rectangle, color, xStart, yStart, width, height);
         }
 
         public void FillRectangle(int xStart, int yStart, int width, int height, Color color)
         {
-            _composer.FillRectangle(xStart, yStart, width, height, color);
+            _composer.DrawGraphicElement(eGrahicsElement.FillRectangle, color, xStart, yStart, width, height);
+        }
+
+        public void DrawEllipse(int xStart, int yStart, int width, int height, Color color)
+        {
+            _composer.DrawGraphicElement(eGrahicsElement.Ellipse, color, xStart, yStart, width, height);
+        }
+
+        public void FillEllipse(int xStart, int yStart, int width, int height, Color color)
+        {
+            _composer.DrawGraphicElement(eGrahicsElement.Ellipse, color, xStart, yStart, width, height);
+        }
+
+        public void DrawPoint(int xStart, int yStart, Color color)
+        {
+            _composer.DrawGraphicElement(eGrahicsElement.Point, color, xStart, yStart);
+        }
+
+        public void DrawPie(int xStart, int yStart, int width, int height, Color color)
+        {
+            _composer.DrawGraphicElement(eGrahicsElement.Pie, color, xStart, yStart, width, height);
+        }
+
+        public void DrawArc(int xStart, int yStart, int width, int height, Color color)
+        {
+            _composer.DrawGraphicElement(eGrahicsElement.Arc, color, xStart, yStart, width, height);
+        }
+
+        public void DrawBezier(int xStart, int yStart, int width, int height, Color color)
+        {
+            _composer.DrawGraphicElement(eGrahicsElement.Bezier, color, xStart, yStart, width, height);
         }
 
 
         public void SetCursorPos(int row, int col)
         {
-            _composer.SetCursorPos(row, col);
+            _composer.Locate(row, col);
         }
 
         public void Write(string text)
@@ -127,16 +254,21 @@ namespace GraphicsConsole
             _composer.ClearText();
         }
 
-        public void ClearCanvas()
+        public void ClearCanvas(int layer)
         {
-            _composer.ClearCanvas();
+            _composer.ClearCanvas(layer);
+        }
+
+        public void SetCanvas(int canvas)
+        {
+            _composer.SetCanvas(canvas);
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             if (Tools.IsDesignMode == false)
                 _refreshScreenTimer.Stop();
-            
+
             base.OnPaint(e);
 
             if (Tools.IsDesignMode == false)
@@ -162,392 +294,119 @@ namespace GraphicsConsole
 
             _borderBrush = new SolidBrush(_borderColor);
         }
-    }
 
-    /// <summary>
-    /// internal representation of the Console content to support background painting etc. 
-    /// </summary>
-    internal class graphicsComposer
-    {
-        Tuple<byte, Tuple<Color, Color>>[,] _textBuffer = new Tuple<byte, Tuple<Color, Color>>[40, 80]; // internal buffer for text layer
-        Bitmap _pufferGraphics;    // Graphics output buffer
-        Bitmap _pufferText;        // Text output Buffer 
-        Bitmap _pufferBackground;  // Background Bitmap
-        Bitmap _output;
-        CharTable _font;
-        int[] _currPos = new int[] { 1, 1 };
-        bool _composing = false;
-
-        Color _foreColor;
-        Color _backColor;
-        SolidBrush _foreBrush;
-        SolidBrush _backBrush;
-
-
-        bool _needrefresh;
-
-        public graphicsComposer()
+        public int ReadKey(int millisec)
         {
-            _font = new CharTable();
+            int ret = (int)Keys.None;
 
-            Reset();
-        }
+            if (InvokeRequired)
+                Invoke(new Action(() => { Focus(); }));
 
-        public Bitmap Image 
-        {
-            get { return _output; }
-        }
+            _inkeyMode = true;
+            _lastInKey = Keys.None;
+            Stopwatch watch = new Stopwatch();
+            if (millisec > 0)
+                watch.Start();
 
-        void _initTextBuffer()
-        {
-            for (int row = 0; row < 40; ++row)
-                for (int col = 0; col < 80; ++col)
-                    _textBuffer[row, col] = new Tuple<byte, Tuple<Color, Color>>(32, new Tuple<Color, Color>(Color.PowderBlue, Color.Transparent));
-        }
-
-        public void ClearText()
-        {
-            _waitUntilComposed();
-
-            _initTextBuffer();
-            _currPos[0] = 1;
-            _currPos[1] = 1;
-
-            using (Graphics g = Graphics.FromImage(_pufferText))
-                g.Clear(Color.Transparent);
-
-            _needrefresh = true;
-        }
-
-        public void ClearCanvas()
-        {
-            _waitUntilComposed();
-
-            using (Graphics g = Graphics.FromImage(_pufferGraphics))
-                g.Clear(Color.Transparent);
-
-            _needrefresh = true;
-        }
-
-        public void DrawLine(int xStart, int yStart, int xEnd, int yEnd, Color color)
-        {
-            _waitUntilComposed();
-
-            using (Pen pen = new Pen(color))
+            while (_inkeyMode)
             {
-                using (Graphics g = Graphics.FromImage(_pufferGraphics))
-                    g.DrawLine(pen, xStart - 1, yStart - 1, xEnd - 1, yEnd - 1);
-            }
-            _needrefresh = true;
+                Thread.Sleep(1);
+                Application.DoEvents();
 
-        }
-
-        public void DrawRectangle(int xStart, int yStart, int width, int height, Color color)
-        {
-            _waitUntilComposed();
-
-            using (Pen pen = new Pen(color))
-            {
-                using (Graphics g = Graphics.FromImage(_pufferGraphics))
-                    g.DrawRectangle(pen, new Rectangle(xStart - 1, yStart - 1, width, height));
-            }
-            _needrefresh = true;
-
-        }
-
-        public void FillRectangle(int xStart, int yStart, int width, int height, Color color)
-        {
-            _waitUntilComposed();
-
-            using (Brush brush = new SolidBrush(color))
-            {
-                using (Graphics g = Graphics.FromImage(_pufferGraphics))
-                    g.FillRectangle(brush, new Rectangle(xStart - 1, yStart - 1, width, height));
-            }
-
-            _needrefresh = true;
-        }
-
-
-        public void SetCursorPos(int row, int col)
-        {
-            _currPos[0] = row;
-            _currPos[1] = col;
-        }
-
-        public void Write(string towrite)
-        {
-            Write(towrite, Color.Empty, Color.Empty);
-
-        }
-
-        void _waitUntilComposed()
-        {
-            while (_composing)
-                System.Threading.Thread.Sleep(1);
-        }
-
-        public void Write(byte ascii_code)
-        {
-            Write(ascii_code, Color.Empty, Color.Empty);
-
-        }
-
-        public void Write(byte ascii_code, Color fore, Color back)
-        {
-            _waitUntilComposed();
-
-            if (ascii_code == 13) // LF
-            {
-                _currPos[0]++;
-
-                if (_currPos[0] > 40)
+                if (_lastInKey != Keys.None)
                 {
-                    _scrollTextUp();
-                    _currPos[0] = 40;
+                    ret = (int)_lastInKey;
+                    break;
                 }
+
+                if (millisec > 0 && watch.ElapsedMilliseconds > millisec)
+                    break;
             }
-            else if (ascii_code == 10) // CR
-            {
-                _currPos[1] = 1;
-            }
-            else if (ascii_code == 9) // TAB
-            {
-                int newpos = ((_currPos[1] / 5) + 1) * 5;
 
-                if (newpos <= 80) // wenn es rechts drüber rausgeht wird es ignoriert...
-                    _currPos[1] = newpos;
-            }
-            else
-            {
-                // Zeichen setzen und dann den Cursor weiterschieben
-                _textBuffer[_currPos[0] - 1, _currPos[1] - 1] = new Tuple<byte, Tuple<Color, Color>>(ascii_code, new Tuple<Color, Color>((fore == Color.Empty ? Color.PowderBlue : fore), (back == Color.Empty ? Color.Transparent : back)));
+            _inkeyMode = false;
 
-                var charTuple = _textBuffer[_currPos[0] - 1, _currPos[1] - 1];
+            return ret;
+        }
 
-                // Text in das Bitmap übertragen...
-                using (Graphics g = Graphics.FromImage(_pufferText))
-                {
-                    int xPos = (_currPos[1] - 1) * 8;
-                    int yPos = (_currPos[0] - 1) * 16;
+        public string ReadLine(Action<string> feedback)
+        {
+            string ret = "";
+            _inputMode = true;
 
-                    if (charTuple.Item2.Item2 != Color.Transparent)
+            if (InvokeRequired)
+                Invoke(new Action(() => {
+                    Focus();
+
+                    while (_lastchar != '\r' && _cancelInput != true)
                     {
-                        using (SolidBrush brush = new SolidBrush(charTuple.Item2.Item2))
-                            g.FillRectangle(brush, new Rectangle(new Point(xPos, yPos), new Size(8, 16)));
-                    }
-                    if (charTuple.Item1 != ' ')
-                    {
-                        if (charTuple.Item2.Item1 != _foreColor)
+                        if (_removeLastChar)
                         {
-                            using (SolidBrush brush = new SolidBrush(charTuple.Item2.Item1))
-                                _font.GetAsciiChar(charTuple.Item1).Draw(brush, g, new Point(xPos, yPos), 1, 1);
-                        }
-                        else
-                            _font.GetAsciiChar(charTuple.Item1).Draw(_foreBrush, g, new Point(xPos, yPos), 1, 1);
-                    }
-
-                }
-
-                _currPos[1]++;
-            }
-
-
-            if (_currPos[1] > 80)
-            {
-                // Zeilenschaltung...
-                _currPos[0]++;
-                _currPos[1] = 1;
-
-                if (_currPos[0] > 40)
-                {
-                    _scrollTextUp();
-                    _currPos[0] = 40;
-                }
-            }
-
-
-            _needrefresh = true;
-        }
-
-        public void Write(string towrite, Color fore, Color back)
-        {
-            _waitUntilComposed();
-
-            foreach (char c in towrite)
-            {
-                if (c == '\n') // LF
-                {
-                    _currPos[0]++;
-
-                    if (_currPos[0] > 40)
-                    {
-                        _scrollTextUp();
-                        _currPos[0] = 40;
-                    }
-                }
-                else if (c == '\r') // CR
-                {
-                    _currPos[1] = 1;
-                }
-                else if (c == '\t') // TAB
-                {
-                    int newpos = ((_currPos[1] / 5) + 1) * 5;
-
-                    if (newpos <= 80) // wenn es rechts drüber rausgeht wird es ignoriert...
-                        _currPos[1] = newpos;
-                }
-                else
-                {
-                    // Zeichen setzen und dann den Cursor weiterschieben
-                    _textBuffer[_currPos[0] - 1, _currPos[1] - 1] = new Tuple<byte, Tuple<Color, Color>>(_font.GetCharCode(c), new Tuple<Color, Color>((fore == Color.Empty ? Color.PowderBlue : fore), (back == Color.Empty ? Color.Transparent : back)));
-
-                    var charTuple = _textBuffer[_currPos[0] - 1, _currPos[1] - 1];
-
-                    // Text in das Bitmap übertragen...
-                    using (Graphics g = Graphics.FromImage(_pufferText))
-                    {
-                        int xPos = (_currPos[1] - 1) * 8;
-                        int yPos = (_currPos[0] - 1) * 16;
-
-                        if (charTuple.Item2.Item2 != Color.Transparent)
-                        {
-                            using (SolidBrush brush = new SolidBrush(charTuple.Item2.Item2))
-                                g.FillRectangle(brush, new Rectangle(new Point(xPos, yPos), new Size(8, 16)));
-                        }
-                        if (charTuple.Item1 != ' ')
-                        {
-                            if (charTuple.Item2.Item1 != _foreColor)
+                            if (ret.Length > 0)
                             {
-                                using (SolidBrush brush = new SolidBrush(charTuple.Item2.Item1))
-                                    _font.GetAsciiChar(charTuple.Item1).Draw(brush, g, new Point(xPos, yPos), 1, 1);
+                                _composer.Back();
+                                ret = ret.Substring(0, ret.Length - 1);
                             }
-                            else
-                                _font.GetAsciiChar(charTuple.Item1).Draw(_foreBrush, g, new Point(xPos, yPos), 1, 1);
+                        }
+                        else if (_lastchar != (char)0)
+                        {
+                            ret += _lastchar;
+                            Write(_lastchar.ToString());
                         }
 
+                        _lastchar = '\0';
+                        _removeLastChar = false;
+
+                        Thread.Sleep(1);
+                        Application.DoEvents();
                     }
+                }));
 
-                    _currPos[1]++;
-                }
+            if (_cancelInput)
+                ret = "";
 
+            _inputMode = false;
 
-                if (_currPos[1] > 80)
-                {
-                    // Zeilenschaltung...
-                    _currPos[0]++;
-                    _currPos[1] = 1;
-
-                    if (_currPos[0] > 40)
-                    {
-                        _scrollTextUp();
-                        _currPos[0] = 40;
-                    }
-                }
-            }
-
-            _needrefresh = true;
+            return ret;
         }
 
-        void _scrollTextUp()
+        protected override void OnPreviewKeyDown(PreviewKeyDownEventArgs e)
         {
-            // Text nach oben scrollen...
-            for (int row = 1; row < 40; ++row)
-                for (int col = 0; col < 80; ++col)
-                    _textBuffer[row - 1, col] = _textBuffer[row, col];
-
-            for (int col = 0; col < 80; ++col)
-                _textBuffer[39, col] = new Tuple<byte, Tuple<Color, Color>>(32, new Tuple<Color, Color>(Color.PowderBlue, Color.Transparent));
-
-            // _pufferText nach oben verschieben...
-            using (Bitmap temp = _pufferText.Clone(new Rectangle(0, 16, 640, 624), _pufferText.PixelFormat))
+            if (_inkeyMode)
             {
-                using (Graphics g = Graphics.FromImage(_pufferText))
-                {
-                    g.Clear(Color.Transparent);
-                    g.DrawImageUnscaled(temp, new Point(0, 0));
-                }
+                _lastInKey = e.KeyCode;
+                //e.Handled = true;
             }
+
+            base.OnPreviewKeyDown(e);
         }
 
-        public void Reset()
+        protected override void OnKeyDown(KeyEventArgs e)
         {
-            _initTextBuffer();
-            SetBackColor(Color.Blue);
-            SetForeColor(Color.PowderBlue);
-
-            if (_pufferText == null)
-                _pufferText = new Bitmap(640, 640);
-
-            if (_pufferGraphics == null)
-                _pufferGraphics = new Bitmap(640, 640);
-
-            if (_output == null)
-                _output = new Bitmap(650, 650);
-
-            if (_pufferBackground != null)
-                _pufferBackground.Dispose();
-
-            _pufferBackground = null;
-
-            _composeOutput();
-        }
-
-        void _composeOutput()
-        {
-            _composing = true;
-            lock (_output)
+            if (_inputMode)
             {
-                using (Graphics canvas = Graphics.FromImage(_output))
-                {
-                    if (_pufferBackground != null)
-                        canvas.DrawImageUnscaled(_pufferBackground, new Point(4, 4));
-                    else
-                        canvas.Clear(_backColor);
+                if (e.KeyCode == Keys.Return)
+                    _inputMode = false;
+                else if (e.KeyCode == Keys.Back)
+                    _removeLastChar = true;
 
-                    canvas.DrawImageUnscaled(_pufferGraphics, new Point(4, 4));
-                    canvas.DrawImageUnscaled(_pufferText, new Point(4, 4));
-                }
+                e.Handled = true;
             }
-            _composing = false;
 
+            //if (_inkeyMode)
+            //{
+            //    _lastInKey = e.KeyCode;
+            //    e.Handled = true;
+            //}
+
+            base.OnKeyDown(e);
         }
 
-        public bool Cancel { get; set; }
-
-
-        public void SetBackColor(Color color)
+        protected override void OnKeyPress(KeyPressEventArgs e)
         {
-            _backColor = color;
-            
-            _backBrush?.Dispose();
+            base.OnKeyPress(e);
 
-            _backBrush = new SolidBrush(_backColor);
-
-            _needrefresh = true;
+            _lastchar = e.KeyChar;
         }
 
-        public void SetForeColor(Color color)
-        {
-            _foreColor = color;
-            _foreBrush?.Dispose();
-
-            _foreBrush = new SolidBrush(_foreColor);
-
-            _needrefresh = true;
-        }
-
-        public void Run()
-        {
-            while (Cancel == false)
-            {
-                System.Threading.Thread.Sleep(1);
-
-                if (_needrefresh)
-                    _composeOutput();
-
-                _needrefresh = false;
-            }
-        }
     }
 }

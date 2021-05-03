@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 
 namespace BasicSharp
 {
@@ -7,6 +8,7 @@ namespace BasicSharp
         private readonly string source;
         private Marker sourceMarker; // current position in source string
         private char lastChar;
+        private Stack subReturnMarker = new Stack(); 
 
         public Marker TokenMarker { get; set; }
 
@@ -22,7 +24,33 @@ namespace BasicSharp
 
         public void GoTo(Marker marker)
         {
+            if (subReturnMarker.Count > 0)
+                throw new Exception("Goto isn't allowed from inside a subroutine.");
+
             sourceMarker = marker;
+        }
+
+        public void Rewind(Marker marker)
+        {
+            sourceMarker = marker;
+            lastChar = ' ';
+        }
+
+        public void GoSub(Marker marker, string name)
+        {
+            marker.Pointer += name.Length;
+            sourceMarker = marker;
+        }
+
+        public void Return()
+        {
+            sourceMarker = (Marker)subReturnMarker.Pop();
+            lastChar = '\n';
+        }
+
+        public void SaveReturnMarker()
+        {
+            subReturnMarker.Push(sourceMarker);
         }
 
         public string GetLine(Marker marker)
@@ -82,10 +110,31 @@ namespace BasicSharp
 
                 switch (Identifier.ToUpper())
                 {
+                    case "SETCOLOR": return Token.SetColor;
+                    // Draw on canvas
+                    case "SETCANVAS": return Token.SetCanvas;
+                    case "LOADSPRITE": return Token.SpriteLoad;
+                    case "DRAWSPRITE": return Token.SpriteDraw;
+                    case "REMOVESPRITE": return Token.SpriteRemove;
+                    case "DRAWLINE": return Token.DrawLine;
+                    case "DRAWRECT": return Token.DrawRect;
+                    case "DRAWELIPSE": return Token.DrawElipse;
+                    case "FILLRECT": return Token.FillRect;
+                    case "FILLELIPSE": return Token.FillElipse;
+                    case "SETPIXEL": return Token.SetPixel;
+                    case "GETPIXEL": return Token.GetPixel;
+
+                    // sound via midi
+                    case "SNDPLAY": return Token.SndPlay; // play one note
+                    case "SNDSTOP": return Token.SndStop; // stop all sounds
+                    case "SNDSELECT": return Token.SndSelect; // Select instrument for a channel
+                    case "SNDVOLUME": return Token.SndVolume; // set sound volume
+
                     case "FREAD": return Token.FRead;
                     case "FWRITE": return Token.FWrite;
-                    case "POS": return Token.SetPos;
-                    case "CLS": return Token.Clear;
+                    
+                    case "LOCATE": return Token.Locate;
+                    case "CLS": return Token.Cls;
                     case "SLEEP": return Token.Sleep;
                     case "PRINT": return Token.Print;
                     case "PRINTL": return Token.PrintL;
@@ -93,6 +142,9 @@ namespace BasicSharp
                     case "ENDIF": return Token.EndIf;
                     case "THEN": return Token.Then;
                     case "ELSE": return Token.Else;
+                    case "WHILE": return Token.While;
+                    case "DO": return Token.Do;
+                    case "ENDDO": return Token.EndWhile;
                     case "FOR": return Token.For;
                     case "TO": return Token.To;
                     case "STEP": return Token.Step;
@@ -102,6 +154,7 @@ namespace BasicSharp
                     case "INKEY": return Token.Inkey;
                     case "LET": return Token.Let;
                     case "GOSUB": return Token.Gosub;
+                    case "SUB": return Token.Sub;
                     case "RETURN": return Token.Return;
                     case "END": return Token.End;
                     case "OR": return Token.Or;

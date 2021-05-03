@@ -24,16 +24,22 @@ namespace BasicSharp
         Inkey,
         Let,
         Gosub,
+        Sub,
         Return,
         Rem,
         End,
         Assert,
-        Clear,
+        Cls,
         Sleep,
-        SetPos,
+        Locate,
 
         FRead,
         FWrite,
+
+        SetCanvas,
+        SpriteLoad,
+        SpriteDraw,
+        SpriteRemove,
 
         NewLine,
         Colon,
@@ -60,6 +66,21 @@ namespace BasicSharp
 
         Test,
 
-        EOF = -1   //End Of File
+        EOF = -1,   //End Of File
+        SetColor = 53,
+        DrawLine = 54,
+        DrawRect = 55,
+        DrawElipse = 56,
+        FillRect = 57,
+        FillElipse = 58,
+        SetPixel = 59,
+        GetPixel = 60,
+        SndPlay = 61,
+        SndStop = 62,
+        SndSelect = 63,
+        SndVolume = 64,
+        While = 65,
+        EndWhile = 66,
+        Do = 67
     }
 }

@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -17,56 +18,98 @@ namespace GraphicsConsole.Test
         public Form1()
         {
             InitializeComponent();
-        }
+        } 
 
         int _cnt = 0;
 
         private void toolStripButton1_Click(object sender, EventArgs e)
         {
-            int step = 5;
-            int start = 120;
+            graphicsConsole1.LoadSprite(@"C:\Visual Studio 2019\Projects\BasicSharp\Ressources\sprites\Dead (1).png", "step1");
+            graphicsConsole1.LoadSprite(@"C:\Visual Studio 2019\Projects\BasicSharp\Ressources\sprites\Dead (2).png", "step2");
+            graphicsConsole1.LoadSprite(@"C:\Visual Studio 2019\Projects\BasicSharp\Ressources\sprites\Dead (3).png", "step3");
+            graphicsConsole1.LoadSprite(@"C:\Visual Studio 2019\Projects\BasicSharp\Ressources\sprites\Dead (4).png", "step4");
+            graphicsConsole1.LoadSprite(@"C:\Visual Studio 2019\Projects\BasicSharp\Ressources\sprites\Dead (5).png", "step5");
+            graphicsConsole1.LoadSprite(@"C:\Visual Studio 2019\Projects\BasicSharp\Ressources\sprites\Dead (6).png", "step6");
+            graphicsConsole1.LoadSprite(@"C:\Visual Studio 2019\Projects\BasicSharp\Ressources\sprites\Dead (7).png", "step7");
+            graphicsConsole1.LoadSprite(@"C:\Visual Studio 2019\Projects\BasicSharp\Ressources\sprites\Dead (8).png", "step8");
+            graphicsConsole1.LoadSprite(@"C:\Visual Studio 2019\Projects\BasicSharp\Ressources\sprites\Dead (9).png", "step8");
+            graphicsConsole1.LoadSprite(@"C:\Visual Studio 2019\Projects\BasicSharp\Ressources\sprites\Dead (10).png", "step8");
 
-            while (start < 520)
+            string code = mleCode.Text;
+                //"CLS\r\n" +
+                //"PRINT \"Whats your Name? \"\r\n" +
+                //"INPUT name\r\n" +
+                //"PRINTL name\r\n";
+
+                //"FOR i = 1 TO 3000\r\n" +
+                //"DRAWSPRITE \"step1\", 100, 200, 200, 150\r\n" +
+                //"SLEEP 10\r\n" +
+                //"CLS\r\n" +
+                //"DRAWSPRITE \"step2\", 100, 200, 200, 150\r\n" +
+                //"SLEEP 10\r\n" +
+                //"CLS\r\n" +
+                //"DRAWSPRITE \"step3\", 100, 200, 200, 150\r\n" +
+                //"SLEEP 10\r\n" +
+                //"CLS\r\n" +
+                //"DRAWSPRITE \"step4\", 100, 200, 200, 150\r\n" +
+                //"SLEEP 10\r\n" +
+                //"CLS\r\n" +
+                //"DRAWSPRITE \"step5\", 100, 200, 200, 150\r\n" +
+                //"SLEEP 10\r\n" +
+                //"CLS\r\n" +
+                //"DRAWSPRITE \"step6\", 100, 200, 200, 150\r\n" +
+                //"SLEEP 10\r\n" +
+                //"CLS\r\n" +
+                //"DRAWSPRITE \"step7\", 100, 200, 200, 150\r\n" +
+                //"SLEEP 10\r\n" +
+                //"CLS\r\n" +
+                //"DRAWSPRITE \"step8\", 100, 200, 200, 150\r\n" +
+                //"SLEEP 10\r\n" +
+                //"CLS\r\n" +
+                //"DRAWSPRITE \"step9\", 100, 200, 200, 150\r\n" +
+                //"SLEEP 10\r\n" +
+                //"CLS\r\n" +
+                //"DRAWSPRITE \"step10\", 100, 200, 200, 150\r\n" +
+                //"SLEEP 10\r\n" +
+                //"CLS\r\n" +
+                //"NEXT i\r\n";
+        
+
+            graphicsConsole1.Run(code);
+
+
+        //graphicsConsole1.Write("Hello world! " + DateTime.Now.ToShortTimeString());
+        }
+
+        private void graphicsConsole1_Started(object sender, EventArgs e)
+        {
+            if (InvokeRequired)
             {
-                graphicsConsole1.DrawLine(1,start,720,start,Color.White);
-                start += step;
-                step = step + 5;
+                BeginInvoke(new Action(() => {
+                    pshStart.Enabled = false;
+                    pshStop.Enabled = true;
+                    lblRunning.Visible = true;
+                }));
+            }
+        }
+
+        private void graphicsConsole1_Stopped(object sender, EventArgs e)
+        {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => {
+                    pshStart.Enabled = true;
+                    pshStop.Enabled = false;
+                    lblRunning.Visible = false;
+                }));
             }
 
-            start = 360;
-            int end = 360;
+            
+        }
 
-            while (start <= 720)
-            {
-                graphicsConsole1.DrawLine(start, 120, end, 520, Color.White);
-                start += 20;
-                end += 40;
-            }
-
-            start = 340;
-            end = 320;
-
-            while (start >= 1)
-            {
-                graphicsConsole1.DrawLine(start, 120, end, 520, Color.White);
-                start -= 20;
-                end -= 40;
-            }
-
-            graphicsConsole1.Write("Hello World ! Das ist ein Text mit dem ATARI ST Font. Der kann auch Umlaute (äöüÄÖÜß).");
-
-            graphicsConsole1.Write("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzäöüÄÖÜß+-*/.");
-
-            graphicsConsole1.Write("Hello", Color.Red, Color.Yellow);
-            graphicsConsole1.Write(" World!", Color.Yellow, Color.FromArgb(255, 0, 55));
-
-            for (byte i = 32; i < 255; i++)
-            {
-                graphicsConsole1.Write(i);
-            }
-
-
-            //graphicsConsole1.Write("Hello world! " + DateTime.Now.ToShortTimeString());
+        private void pshStop_Click(object sender, EventArgs e)
+        {
+            graphicsConsole1.Stop();
         }
     }
 }

@@ -1,6 +1,7 @@
 using BasicConsole;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace BasicSharp
 {
@@ -10,6 +11,7 @@ namespace BasicSharp
         public bool HasInput { get; set; } = true;
 
         public IConsole Console { get; set; } = new TextModeConsole();
+        public CancellationToken CancelationToken { get; set; }
 
 
         private Lexer lex;
@@ -18,13 +20,16 @@ namespace BasicSharp
 
         private Dictionary<string, Value> vars; // all variables are stored here
         private Dictionary<string, Marker> labels; // already seen labels 
-        private Dictionary<string, Marker> loops; // for loops
+        private Dictionary<string, Marker> loops; // for loop
+        private Stack<Marker[]> whiles; // stack (lifo) for while loops
+        private Dictionary<string, Marker> subs; // for subs
         private Dictionary<string, int> steps; // all variables are stored here
 
         public delegate Value BasicFunction(Interpreter interpreter, List<Value> args);
         private Dictionary<string, BasicFunction> funcs; // all maped functions
 
         private int ifcounter; // counter used for matching "if" with "else"
+        private int whilecounter; // counter used for matching "while do" with "enddo"
 
         private Marker lineMarker; // current line marker
 
@@ -32,13 +37,16 @@ namespace BasicSharp
 
         public Interpreter(string input)
         {
-            this.lex = new Lexer(input);
-            this.vars = new Dictionary<string, Value>();
-            this.steps = new Dictionary<string, int>();
-            this.labels = new Dictionary<string, Marker>();
-            this.loops = new Dictionary<string, Marker>();
-            this.funcs = new Dictionary<string, BasicFunction>();
-            this.ifcounter = 0;
+            lex = new Lexer(input);
+            vars = new Dictionary<string, Value>();
+            steps = new Dictionary<string, int>();
+            labels = new Dictionary<string, Marker>();
+            loops = new Dictionary<string, Marker>();
+            whiles = new Stack<Marker[]>();
+            funcs = new Dictionary<string, BasicFunction>();
+            subs = new Dictionary<string, Marker>();
+            ifcounter = 0;
+            whilecounter = 0;
             BuiltIns.InstallAll(this); // map all builtins functions
         }
 
@@ -68,6 +76,14 @@ namespace BasicSharp
 
         void Error(string text)
         {
+            if (text == "Canceled")
+                Console.WriteLine(text + " at line " + lineMarker.Line + ": " + GetLine());
+            else
+            {
+                Console.WriteLine("BAD");
+                Console.WriteLine(text + " at line " + lineMarker.Line + ": " + GetLine());
+            }
+
             throw new Exception(text + " at line " + lineMarker.Line + ": " + GetLine());
         }
 
@@ -83,6 +99,7 @@ namespace BasicSharp
             exit = false;
             GetNextToken();
             while (!exit) Line(); // do all lines
+            Console.WriteLine("READY");
         }
 
         Token GetNextToken()
@@ -116,28 +133,64 @@ namespace BasicSharp
 
         void Statment()
         {
+            if (CancelationToken != null && CancelationToken.IsCancellationRequested)
+                Error("Canceled");
+
             Token keyword = lastToken;
+
+            if (keyword == Token.While)
+            {
+                Marker startMarker = new Marker(lex.TokenMarker.Pointer - 1, lex.TokenMarker.Line, lex.TokenMarker.Column - 1);
+
+                if (whiles.Count == 0 || whiles.Peek()[0].Pointer != lineMarker.Pointer - 1)
+                    whiles.Push(new Marker[] { startMarker, lineMarker });
+
+            }
+
             GetNextToken();
             switch (keyword)
             {
                 case Token.Sleep: Sleep(); break;
-                case Token.Clear: Clear(); break;
-                case Token.SetPos: SetPos(); break;
+                case Token.Cls: Cls(); break;
+                case Token.Locate: Locate(); break;
                 case Token.Print: Print(); break;
                 case Token.PrintL: PrintL(); break;
                 case Token.Input: Input(); break;
                 case Token.Inkey: Inkey(); break;
                 case Token.Goto: Goto(); break;
+                case Token.While: While(); break;
+                case Token.EndWhile: EndDo(); break;
                 case Token.If: If(); break;
                 case Token.Else: Else(); break;
                 case Token.EndIf: break;
                 case Token.For: For(); break;
+                case Token.Gosub: Gosub(); break;
+                case Token.Return: Return(); break;
                 case Token.Next: Next(); break;
                 case Token.Let: Let(); break;
                 case Token.End: End(); break;
                 case Token.Assert: Assert(); break;
                 case Token.FRead: FRead(); break;
                 case Token.FWrite: FWrite(); break;
+                case Token.SpriteLoad: SpriteLoad(); break;
+                case Token.SpriteDraw: SpriteDraw(); break;
+                case Token.SpriteRemove: SpriteRemove(); break;
+                case Token.SetCanvas: SetCanvas(); break;
+
+                case Token.SndPlay: SoundPlay(); break;
+                case Token.SndSelect: SoundSelect(); break;
+                case Token.SndStop: SoundStop(); break;
+                case Token.SndVolume: SoundVolume(); break;
+
+                case Token.SetColor: SetColor(); break;
+                case Token.DrawElipse: DrawElipse(); break;
+                case Token.DrawRect: DrawRect(); break;
+                case Token.DrawLine: DrawLine(); break;
+                case Token.FillElipse: FillElipse(); break;
+                case Token.FillRect: FillRect(); break;
+                case Token.SetPixel: SetPixel(); break;
+                case Token.GetPixel: GetPixel(); break;
+
                 case Token.Identifier:
                     if (lastToken == Token.Equal) Let();
                     else if (lastToken == Token.Colon) Label();
@@ -160,6 +213,76 @@ namespace BasicSharp
 
 
         #region command methods
+
+
+        void SoundSelect()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length != 2)
+                Error("Wrong parameter count. Need 2 parameters.");
+
+            try
+            {
+                Console.SoundSelect(Convert.ToInt32(parameters[0]), Convert.ToInt32(parameters[1]));
+            }
+            catch
+            {
+                Error("Error while SOUNDSELECT.");
+            }
+        }
+
+        void SoundPlay()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length != 5)
+                Error("Wrong parameter count. Need 5 parameters.");
+
+            try
+            {
+                Console.SoundPlay(Convert.ToInt32(parameters[0]), Convert.ToInt32(parameters[1]), Convert.ToInt32(parameters[2]), Convert.ToInt32(parameters[3]), Convert.ToInt32(parameters[4]));
+            }
+            catch
+            {
+                Error("Error while SOUNDPLAY.");
+            }
+        }
+
+        void SoundStop()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters != null && parameters.Length > 0)
+                Error("Wrong parameter count. Command requires no parameter.");
+
+            try
+            {
+                Console.SoundStop();
+            }
+            catch
+            {
+                Error("Error while SOUNDSTOP.");
+            }
+        }
+
+        void SoundVolume()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length != 1)
+                Error("Wrong parameter count. Need 1 parameters.");
+
+            try
+            {
+                Console.SoundVolume(Convert.ToInt32(parameters[0]));
+            }
+            catch
+            {
+                Error("Error while SOUNDVOLUME.");
+            }
+        }
+
         void Print()
         {
             if (!HasPrint)
@@ -247,6 +370,264 @@ namespace BasicSharp
             }
         }
 
+        void SpriteLoad()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length != 2)
+                Error("Wrong parameter count. Need 2 parameters.");
+
+            if (!(parameters[1] is string))
+                Error("Wrong parameter type (2). Need string parameter.");
+
+            try
+            {
+                Console.LoadSprite(parameters[0].ToString(), parameters[1].ToString());
+            }
+            catch
+            {
+                Error("Error while loading sprite from file.");
+            }
+        }
+
+        void SetColor()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length != 2)
+                Error("Wrong parameter count. Need 2 parameter.");
+
+            try
+            {
+                Console.SetColor(Convert.ToInt32(parameters[0]), Convert.ToInt32(parameters[1]));
+            }
+            catch
+            {
+                Error("Error while set colors.");
+            }
+        }
+
+        void DrawElipse()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length < 5)
+                Error("Wrong parameter count. Need min 5 parameters.");
+
+            try
+            {
+                Console.DrawElipse(
+                    Convert.ToInt32(parameters[0]),
+                    Convert.ToInt32(parameters[1]),
+                    Convert.ToInt32(parameters[2]),
+                    Convert.ToInt32(parameters[3]),
+                    Convert.ToInt32(parameters[4]),
+                    (parameters.Length > 5 ? Convert.ToInt32(parameters[5]) : 1),
+                    (parameters.Length > 6 ? Convert.ToInt32(parameters[6]) : 0));
+            }
+            catch
+            {
+                Error("Error in DRAWELIPSE.");
+            }
+        }
+
+        void DrawRect()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length < 5)
+                Error("Wrong parameter count. Need min 5 parameters.");
+
+            try
+            {
+                Console.DrawRect(
+                    Convert.ToInt32(parameters[0]),
+                    Convert.ToInt32(parameters[1]),
+                    Convert.ToInt32(parameters[2]),
+                    Convert.ToInt32(parameters[3]),
+                    Convert.ToInt32(parameters[4]),
+                    (parameters.Length > 5 ? Convert.ToInt32(parameters[5]) : 1),
+                    (parameters.Length > 6 ? Convert.ToInt32(parameters[6]) : 0));
+            }
+            catch
+            {
+                Error("Error in DRAWRECT.");
+            }
+        }
+
+        void DrawLine()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length < 5)
+                Error("Wrong parameter count. Need min 5 parameters.");
+
+            try
+            {
+                Console.DrawLine(
+                    Convert.ToInt32(parameters[0]),
+                    Convert.ToInt32(parameters[1]),
+                    Convert.ToInt32(parameters[2]),
+                    Convert.ToInt32(parameters[3]),
+                    Convert.ToInt32(parameters[4]),
+                    (parameters.Length > 5 ? Convert.ToInt32(parameters[5]) : 1));
+            }
+            catch
+            {
+                Error("Error in DRAWLINE.");
+            }
+        }
+
+        void FillElipse()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length < 5)
+                Error("Wrong parameter count. Need min 5 parameters.");
+
+            try
+            {
+                Console.FillElipse(
+                    Convert.ToInt32(parameters[0]),
+                    Convert.ToInt32(parameters[1]),
+                    Convert.ToInt32(parameters[2]),
+                    Convert.ToInt32(parameters[3]),
+                    Convert.ToInt32(parameters[4]),
+                    (parameters.Length > 5 ? Convert.ToInt32(parameters[5]) : 0));
+            }
+            catch
+            {
+                Error("Error in FILLELIPSE.");
+            }
+
+        }
+
+        void FillRect()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length < 5)
+                Error("Wrong parameter count. Need min 5 parameters.");
+
+            try
+            {
+                Console.FillRect(
+                    Convert.ToInt32(parameters[0]),
+                    Convert.ToInt32(parameters[1]),
+                    Convert.ToInt32(parameters[2]),
+                    Convert.ToInt32(parameters[3]),
+                    Convert.ToInt32(parameters[4]),
+                    (parameters.Length > 5 ? Convert.ToInt32(parameters[5]) : 0));
+            }
+            catch
+            {
+                Error("Error in FILLRECT.");
+            }
+        }
+
+        void SetPixel()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length < 3)
+                Error("Wrong parameter count. Need 3 parameters.");
+
+            try
+            {
+                Console.SetPixel(
+                    Convert.ToInt32(parameters[0]),
+                    Convert.ToInt32(parameters[1]),
+                    Convert.ToInt32(parameters[2]));
+            }
+            catch
+            {
+                Error("Error in SETPIXEL.");
+            }
+        }
+
+        void GetPixel()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length != 1)
+                Error("Wrong parameter count. Need 1 parameter.");
+
+            //if (!(parameters[1] is string))
+            //    Error("Wrong parameter type (2). Need string parameter.");
+
+            try
+            {
+                Console.SetCanvas(Convert.ToInt32(parameters[0]));
+            }
+            catch
+            {
+                Error("Error while selecting canvas.");
+            }
+        }
+
+        void SetCanvas()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length != 1)
+                Error("Wrong parameter count. Need 1 parameter.");
+
+            //if (!(parameters[1] is string))
+            //    Error("Wrong parameter type (2). Need string parameter.");
+
+            try
+            {
+                Console.SetCanvas(Convert.ToInt32(parameters[0]));
+            }
+            catch
+            {
+                Error("Error while selecting canvas.");
+            }
+        }
+
+        void SpriteDraw()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || (parameters.Length != 3 && parameters.Length != 5))
+                Error("Wrong parameter count. Need 3 or 5 parameters.");
+
+            //if (!(parameters[1] is string))
+            //    Error("Wrong parameter type (2). Need string parameter.");
+
+            try
+            {
+                if (parameters.Length == 3)
+                    Console.DrawSprite(parameters[0].ToString(), Convert.ToInt32(parameters[1]), Convert.ToInt32(parameters[2]));
+                else if (parameters.Length == 5)
+                    Console.DrawSprite(parameters[0].ToString(), Convert.ToInt32(parameters[1]), Convert.ToInt32(parameters[2]), Convert.ToInt32(parameters[3]), Convert.ToInt32(parameters[4]));
+            }
+            catch
+            {
+                Error("Error while drawing sprite.");
+            }
+        }
+
+        void SpriteRemove()
+        {
+            object[] parameters = getParameters();
+
+            if (parameters == null || parameters.Length != 3)
+                Error("Wrong parameter count. Need 3 parameters.");
+
+            //if (!(parameters[1] is string))
+            //    Error("Wrong parameter type (2). Need string parameter.");
+
+            try
+            {
+                Console.RemoveSprite(parameters[0].ToString(), Convert.ToInt32(parameters[1]), Convert.ToInt32(parameters[2]));
+            }
+            catch
+            {
+                Error("Error while removing sprite.");
+            }
+        }
+
         void Sleep()
         {
             object[] parameters = getParameters();
@@ -260,7 +641,7 @@ namespace BasicSharp
             Console.Sleep(Convert.ToInt32(parameters[0]));
         }
 
-        void SetPos()
+        void Locate()
         {
             object[] parameters = getParameters();
 
@@ -276,11 +657,14 @@ namespace BasicSharp
             Console.SetPos(Convert.ToInt32(parameters[0]), Convert.ToInt32(parameters[1]));
         }
 
-        void Clear()
+        void Cls()
         {
-            Console.Clear();
+            object[] parameters = getParameters();
 
-            GetNextToken();
+            if (parameters == null || parameters.Length < 1)
+                Console.Cls(0);
+            else
+                Console.Cls(Convert.ToInt32(parameters[0]));
         }
 
 
@@ -328,8 +712,6 @@ namespace BasicSharp
                 GetNextToken();
                 wait = Convert.ToInt32(Expr().Real);
             }
-            else
-                GetNextToken();
 
             int input = Console.Read(wait);
 
@@ -403,6 +785,34 @@ namespace BasicSharp
             }
         }
 
+        void EndDo()
+        {
+            whiles.Peek()[1] = lex.TokenMarker;
+                        
+            lineMarker = whiles.Peek()[0];
+            lex.Identifier = "";
+            lex.Rewind(whiles.Peek()[0]);
+            lastToken = Token.NewLine;
+        }
+
+        void While()
+        {
+            // check if argument is equal to 0
+            bool result = (Expr().BinOp(new Value(0), Token.Equal).Real == 1);
+
+            Match(Token.Do);
+            GetNextToken();
+
+
+            if (result)
+            {
+                lineMarker = whiles.Pop()[1];
+                lex.Rewind(lineMarker);
+                lastToken = Token.NewLine;
+                return;
+            }
+        }
+
         void Else()
         {
             // skip to matching endif
@@ -454,6 +864,41 @@ namespace BasicSharp
             GetNextToken();
 
             SetVar(id, Expr());
+        }
+
+        void Gosub()
+        {
+            lex.SaveReturnMarker();
+            Match(Token.Identifier);
+            string name = lex.Identifier;
+
+            if (!subs.ContainsKey(name))
+            {
+                // if we didn't encaunter required sub yet, start to search for it
+                while (true)
+                {
+                    if (GetNextToken() == Token.Identifier && prevToken == Token.Sub)
+                    {
+                        if (!subs.ContainsKey(lex.Identifier))
+                            subs.Add(lex.Identifier, lex.TokenMarker);
+                        if (lex.Identifier == name)
+                            break;
+                    }
+                    if (lastToken == Token.EOF)
+                    {
+                        Error("Cannot find sub named " + name);
+                    }
+                }
+            }
+            lex.GoSub(subs[name], name);
+            lastToken = Token.NewLine;
+        }
+
+        void Return()
+        {
+            lex.Return();
+            lastToken = Token.NewLine;
+            //GetNextToken();
         }
 
         void For()
@@ -558,6 +1003,9 @@ namespace BasicSharp
         #region helping methods
         object[] getParameters()
         {
+            if (lastToken == Token.NewLine || lastToken == Token.Semicolon || lastToken == Token.EOF)
+                return null;
+
             List<object> param = new List<object>();
 
             while (true)
