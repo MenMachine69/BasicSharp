@@ -23,8 +23,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Ressourcen", "Ressourcen", 
 		Ressources\atari.fnt = Ressources\atari.fnt
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MidiSynth", "MidiSynth\MidiSynth.csproj", "{342FC253-E719-40AE-B91C-20A2D29540DF}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -54,10 +52,6 @@ Global
 		{03C679A1-7997-4733-B045-33DA41BDF17B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03C679A1-7997-4733-B045-33DA41BDF17B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{03C679A1-7997-4733-B045-33DA41BDF17B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{342FC253-E719-40AE-B91C-20A2D29540DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{342FC253-E719-40AE-B91C-20A2D29540DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{342FC253-E719-40AE-B91C-20A2D29540DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{342FC253-E719-40AE-B91C-20A2D29540DF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
